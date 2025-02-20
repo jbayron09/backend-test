@@ -2,9 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
+
   app.enableCors();
   app.useGlobalPipes(
     new ValidationPipe({
@@ -24,7 +27,14 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(9000);
+  const port = configService.get<number>('PORT');
+
+  if (!port) {
+    throw new Error('PORT is not defined in .env file');
+  }
+
+  await app.listen(port);
+  console.log(`Server running on http://localhost:${port}`);
 }
 
 bootstrap();
