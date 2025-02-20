@@ -2,7 +2,6 @@ import {
   Injectable,
   UnauthorizedException,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
@@ -18,7 +17,6 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
-  /** 🔐 Validar credenciales de usuario */
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.usersService.findByEmail(email);
     if (!user) throw new UnauthorizedException('Credenciales incorrectas.');
@@ -30,7 +28,6 @@ export class AuthService {
     return user;
   }
 
-  /** 🔑 Iniciar sesión y devolver un token JWT */
   async login(email: string, password: string) {
     const user = await this.validateUser(email, password);
     const payload = { email: user.email, sub: user._id };
@@ -45,13 +42,11 @@ export class AuthService {
     };
   }
 
-  /** 🔄 Refrescar token (Opcional) */
   async refreshToken(user: any) {
     const payload = { email: user.email, sub: user._id };
     return { access_token: this.jwtService.sign(payload) };
   }
 
-  /** 📩 Enviar correo de recuperación de contraseña */
   async sendPasswordResetEmail(email: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) throw new NotFoundException('Usuario no encontrado.');
@@ -77,7 +72,6 @@ export class AuthService {
     return { message: 'Correo de recuperación enviado.' };
   }
 
-  /** 🔄 Restablecer contraseña */
   async resetPassword(token: string, newPassword: string) {
     try {
       const decoded = this.jwtService.verify(token);
@@ -85,7 +79,9 @@ export class AuthService {
       if (!user) throw new NotFoundException('Usuario no encontrado.');
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-      await this.usersService.update(user._id, { password: hashedPassword });
+      await this.usersService.update(String(user._id), {
+        password: hashedPassword,
+      });
 
       return { message: 'Contraseña actualizada correctamente.' };
     } catch (error) {
