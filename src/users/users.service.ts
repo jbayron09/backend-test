@@ -41,6 +41,17 @@ export class UsersService {
     return user;
   }
 
+  async update(id: string, userData: any): Promise<User> {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException('Usuario no encontrado.');
+
+    if (userData.password) {
+      userData.password = await bcrypt.hash(userData.password, 10);
+    }
+
+    return this.userModel.findByIdAndUpdate(id, userData, { new: true }).exec();
+  }
+
   async delete(id: string): Promise<User> {
     const user = await this.findById(id);
     if (!user) throw new NotFoundException('Usuario no encontrado.');
