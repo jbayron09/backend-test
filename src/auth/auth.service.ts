@@ -79,7 +79,7 @@ export class AuthService {
       if (!user) throw new NotFoundException('Usuario no encontrado.');
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-      await this.usersService.update(String(user._id), {
+      await this.usersService.update(String(user?._id || ''), {
         password: hashedPassword,
       });
 
