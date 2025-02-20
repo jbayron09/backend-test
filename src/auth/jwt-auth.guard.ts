@@ -13,7 +13,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
   handleRequest(err, user) {
     if (err || !user) {
-      throw err || new UnauthorizedException();
+      throw new UnauthorizedException(
+        'Access denied: You do not have a valid token or your session has expired. Please log in again.',
+      );
     }
     return user;
   }
