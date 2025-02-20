@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
@@ -13,6 +17,8 @@ export class UsersService {
   ) {}
 
   async create(userData: any): Promise<User> {
+    const exists = await this.findByEmail(userData.email);
+    if (exists) throw new BadRequestException('El correo ya está registrado.');
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     const newUser = new this.userModel({
       ...userData,
@@ -27,5 +33,27 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<User> {
     return this.userModel.findOne({ email }).exec();
+  }
+
+  async findById(id: string): Promise<User> {
+    const user = await this.userModel.findById(id).exec();
+    if (!user) throw new NotFoundException('Usuario no encontrado.');
+    return user;
+  }
+
+  async delete(id: string): Promise<User> {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException('Usuario no encontrado.');
+    return this.userModel.findByIdAndDelete(id).exec();
+  }
+
+  async seedUsers() {
+    const users = [
+      { fullName: 'Admin', email: 'admin@example.com', password: 'admin123' },
+    ];
+    for (const user of users) {
+      const exists = await this.findByEmail(user.email);
+      if (!exists) await this.create(user);
+    }
   }
 }
