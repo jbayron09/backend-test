@@ -28,3 +28,13 @@ export class ResetPasswordDto {
   @MinLength(6)
   newPassword: string;
 }
+
+export class RefreshTokenDto {
+  @ApiProperty({ example: '67b7c8a187e88a43e0b4c8d0', description: 'User ID' })
+  @IsString()
+  userId: string;
+
+  @ApiProperty({ example: 'user@example.com', description: 'User email' })
+  @IsEmail()
+  email: string;
+}

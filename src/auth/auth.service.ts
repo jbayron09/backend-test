@@ -9,6 +9,8 @@ import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcryptjs';
 import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
+import { User } from '../users/schemas/user.schema';
+import { RefreshTokenDto } from './dto/auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -48,8 +50,14 @@ export class AuthService {
     };
   }
 
-  async refreshToken(user: any) {
-    const payload = { email: user.email, sub: user._id };
+  async refreshToken(refreshTokenDto: RefreshTokenDto) {
+    const { userId, email } = refreshTokenDto;
+
+    if (!userId || !email) {
+      throw new UnauthorizedException('Invalid user data.');
+    }
+
+    const payload = { email, sub: userId };
     return { access_token: this.jwtService.sign(payload) };
   }
 

@@ -8,7 +8,7 @@ import {
   ApiResponse,
   ApiBody,
 } from '@nestjs/swagger';
-import { LoginDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
+import { LoginDto, ForgotPasswordDto, ResetPasswordDto, RefreshTokenDto } from "./dto/auth.dto";
 
 @ApiTags('auth')
 @Controller('auth')
@@ -60,6 +60,7 @@ export class AuthController {
     description: 'Generates a new JWT token for the authenticated user',
   })
   @ApiResponse({ status: 200, description: 'New JWT token generated' })
+  @ApiBody({ type: RefreshTokenDto })
   async refreshToken(@Request() req) {
     return this.authService.refreshToken(req.user);
   }
