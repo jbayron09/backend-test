@@ -2,26 +2,32 @@ import {
   Injectable,
   UnauthorizedException,
   NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcryptjs';
-import * as nodemailer from 'nodemailer';
 import { ConfigService } from '@nestjs/config';
+import { Resend } from 'resend';
 
 @Injectable()
 export class AuthService {
+  private resend: Resend;
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
-  ) {}
+  ) {
+    this.resend = new Resend(this.configService.get<string>('RESEND_API_KEY'));
+  }
 
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.usersService.findByEmail(email);
     if (!user) throw new UnauthorizedException('Credenciales incorrectas.');
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
+
     if (!isPasswordValid)
       throw new UnauthorizedException('Credenciales incorrectas.');
 
@@ -49,43 +55,63 @@ export class AuthService {
 
   async sendPasswordResetEmail(email: string) {
     const user = await this.usersService.findByEmail(email);
-    if (!user) throw new NotFoundException('Usuario no encontrado.');
+    if (!user) throw new NotFoundException('User not found.');
+    console.log(email);
+    const resetToken = this.jwtService.sign(
+      { email },
+      { expiresIn: process.env.JWT_EXPIRATION },
+    );
 
-    const resetToken = this.jwtService.sign({ email }, { expiresIn: '1h' });
-    const resetLink = `${this.configService.get('FRONTEND_URL')}/reset-password?token=${resetToken}`;
+    try {
+      const response = await this.resend.emails.send({
+        from: `Acme <${this.configService.get('EMAIL_FROM')}>`,
+        to: [email],
+        subject: 'Password Reset Request',
+        html: `
+          <p>Hello,</p>
+          <p>Your password reset token is:</p>
+          <p><strong>${resetToken}</strong></p>
+          <p>Use this token in the API to reset your password.</p>
+          <p>If you did not request this, please ignore this email.</p>
+        `,
+      });
 
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: this.configService.get('EMAIL_USER'),
-        pass: this.configService.get('EMAIL_PASS'),
-      },
-    });
+      if (response.error) {
+        return {
+          message: 'Failed to send password reset email.',
+          error: response.error.message,
+        };
+      }
 
-    await transporter.sendMail({
-      from: '"Soporte Backend Test" <no-reply@example.com>',
-      to: email,
-      subject: 'Recuperación de contraseña',
-      text: `Haz clic en el siguiente enlace para restablecer tu contraseña: ${resetLink}`,
-    });
-
-    return { message: 'Correo de recuperación enviado.' };
+      return { message: 'Password reset email sent successfully' };
+    } catch (error) {
+      console.error('Exception in sendPasswordResetEmail:', error);
+      if (error.response) {
+        return {
+          message: 'Failed to send password reset email.',
+          error: error.message.data.message,
+        };
+      }
+      throw new InternalServerErrorException(
+        'An unexpected error occurred while sending the email.',
+      );
+    }
   }
 
   async resetPassword(token: string, newPassword: string) {
     try {
       const decoded = this.jwtService.verify(token);
       const user = await this.usersService.findByEmail(decoded.email);
-      if (!user) throw new NotFoundException('Usuario no encontrado.');
 
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      await this.usersService.update(String(user?._id || ''), {
-        password: hashedPassword,
+      if (!user) throw new NotFoundException('User not found.');
+
+      await this.usersService.update(String(user._id), {
+        password: newPassword,
       });
 
-      return { message: 'Contraseña actualizada correctamente.' };
+      return { message: 'Password updated successfully.' };
     } catch (error) {
-      throw new UnauthorizedException('Token inválido o expirado.');
+      throw new UnauthorizedException('Invalid or expired token.');
     }
   }
 }
