@@ -31,14 +31,4 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   fullName?: string;
-
-  @ApiProperty({
-    example: 'newpassword123',
-    description: 'Updated password',
-    required: false,
-  })
-  @IsString()
-  @MinLength(6)
-  @IsOptional()
-  password?: string;
 }

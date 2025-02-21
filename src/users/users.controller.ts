@@ -39,7 +39,7 @@ export class UsersController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('UserDetails/:id')
+  @Get('userDetails/:id')
   @ApiOperation({
     summary: 'Get user by ID',
     description: 'Returns details of a user by their ID',
