@@ -15,7 +15,7 @@ export class SeedService {
         const hashedPassword = await bcrypt.hash(user.password, 10);
         await this.usersService.create({
           ...user,
-          password: hashedPassword, // Guardar contraseña encriptada
+          password: hashedPassword,
         });
         console.log(`Created user: ${user.email}`);
       } else {
